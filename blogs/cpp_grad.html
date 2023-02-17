@@ -1,0 +1,107 @@
+<!DOCTYPE HTML>
+<!--
+	Strata by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Tom Kite</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="../assets/css/main.css" />
+	</head>
+	<body class="is-preload">
+
+		<!-- Header -->
+		<header id="header">
+			<div class="inner" style="display:flex; flex-direction:column; align-items:center;">
+				<div class="image avatar" style="margin-bottom:20px; width:200px; height:200px; display:block;">
+					<a href="/"><img src="/images/avatar.jpg" alt="" style="width:100%; height:100%;" /></a>
+				</div>
+				<h1 style="text-align:center;">
+					<strong>Hi, I'm Tom.</strong><br /> I explore the universe,<br /> one software solution at a time.
+				</h1>
+			</div>
+		</header>
+
+
+		<!-- Main -->
+			<div id="main">
+				<!-- One -->
+				<section id="one">
+					<header class="major">
+						<h1>cpp_grad: a first adventure into backpropagation and neural networks</h1>
+					</header>
+					<p>
+						When I discovered Andrej Karpathy's tutorial for micrograd I was immediately hooked.
+						In my experience it is rare to find resources on neural networks that build the code from scratch.
+						Andrej Karpathy however does a great job of explaining the fundamentals, and using simple yet powerful python code to demonstrate the principles.
+						I wanted to implement the code for myself, and decided C++ would deliever a healthy challenge while potentially giving enough speed to make the code useful.
+						I called it cpp_grad.
+					</p>
+				</section>
+                    
+                <!-- Image  -->
+                <div class="image main">
+                    <img src="/images/italy_island.jpg" width="600" height="450" alt=""/>
+                </div>
+
+				<section id="two">
+					<p>
+						I didn't realise when I first started this task how much this would refine my thinking of C++.
+						I have developed in C++ for a number of years now, I have listened to podcasts with Bjarne Stroustrup and read the "tour guide".
+						I am familiar with the ideas of RAII, object lifetime, the lack of garbage collection.
+						This project really made me confront everything I had read and understood in theory.
+						<br />
+						The essential issue is that micrograds backpropagation relies on each value keeping track of its parents and the operation that gave rise to it.
+						For example, the value C = A + B must <i>remember</i> who A and B are so it can update their gradients later. Simple enough right?
+						The line that first made me realise something subtle was going on here was writing a loss function as a sum of squares.
+						Here we will simply write L = A^2 + B^2 + C^2 as an example. The point is that A, B and C are not going to be local variables on the stack unless you have some horribly hardcoded neural netowrk.
+						And further to this, we want to be able to write code like x = x + 10. But then who is the parent of x?
+						<br />
+						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through x,
+						and the true memory address of the backpropagated values which must be created and kept alive somehow when temporary values like x + 10 arise.
+					</p>
+				</section>
+
+				<section id="three">
+					<p>
+						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
+						
+					</p>
+				</section>
+
+				<section id="four">
+					<p>
+						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
+					</p>
+				</section>
+            </div>
+            
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner">
+					<ul class="icons">
+						<!--<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>-->
+						<li><a href="#" class="icon brands fa-github"><span class="label">Github</span></a></li>
+						<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribbble</span></a></li>-->
+						<li><a href="#" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
+					</ul>
+					<ul class="copyright">
+						<li>&copy; Untitled</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+					</ul>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="/assets/js/jquery.min.js"></script>
+			<script src="/assets/js/jquery.poptrox.min.js"></script>
+			<script src="/assets/js/browser.min.js"></script>
+			<script src="/assets/js/breakpoints.min.js"></script>
+			<script src="/assets/js/util.js"></script>
+			<script src="/assets/js/main.js"></script>
+
+	</body>
+</html>
