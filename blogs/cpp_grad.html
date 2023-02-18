@@ -9,7 +9,8 @@
 		<title>Tom Kite</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" href="../assets/css/main.css" />
+		<link rel="stylesheet" href="/assets/css/main.css" />
+		<link rel="stylesheet" href="/assets/css/prism.css" />
 	</head>
 	<body class="is-preload">
 
@@ -62,6 +63,49 @@
 						<br />
 						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through x,
 						and the true memory address of the backpropagated values which must be created and kept alive somehow when temporary values like x + 10 arise.
+						<br />
+						<pre class="language-Cpp line-numbers">
+							<code>
+// Constructors and destructors
+Value()
+{
+	_ptr = std::make_shared&lt;_Value&lt;T&gt;&gt;(static_cast&lt;T&gt;(0));
+}
+Value(const T& data)
+{
+	_ptr = std::make_shared&lt;_Value&lt;T&gt;&gt;(data);
+}
+~Value()
+{
+	_ptr = nullptr;
+};
+
+// Copy and move constructors
+Value(const Value& other)
+{
+	_ptr = other._ptr;
+}
+Value(Value&& other)
+{
+	_ptr = other._ptr;
+	other._ptr = nullptr;
+}
+
+// Copy and move assignment operators
+Value&lt;T&gt;& operator=(const Value&lt;T&gt;& other)
+{
+	if (&other!=this)
+		_ptr = other._ptr;
+	return *this;
+}
+Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
+{
+	_ptr = other._ptr;
+	other._ptr = nullptr;
+	return *this;
+}
+							</code>
+						</pre>
 					</p>
 				</section>
 
@@ -102,6 +146,7 @@
 			<script src="/assets/js/breakpoints.min.js"></script>
 			<script src="/assets/js/util.js"></script>
 			<script src="/assets/js/main.js"></script>
+			<script src="/assets/js/prism.js"></script>
 
 	</body>
 </html>
