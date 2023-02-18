@@ -53,26 +53,27 @@
 				<section id="two">
 					<p>
 						I didn't realise when I first started this task how much this would refine my thinking of C++.
-						<br />
+						<br /><br />
 						I have developed in C++ for a number of years now, I have listened to podcasts with Bjarne Stroustrup and read the "tour guide".
 						I am familiar with the ideas of RAII, object lifetime, the lack of garbage collection.
-						But it was this project that really made me confront everything I had read and understood in theory.
-						<br />
+						But this project <i>really</i> made me confront everything I had read and understood <i>in theory</i>.
+						<br /><br />
 						The essential issue is that micrograd's backpropagation relies on each value keeping track of its parents and the operation that gave rise to it.
-						For example, the value  C = A + B  must <i>remember</i> who A and B are so it can update their gradients later. Simple enough right?
-						The line that first made me realise something subtle was going on here was writing a loss function as a sum of squares.
-						Here we will simply write  L = A^2 + B^2 + C^2  as an example. The point is that A, B and C are not going to be local variables on the stack unless you have some
-						horribly hardcoded neural netowrk.
-						And further to this, we want to be able to write code like  x = x + 10. But then who is the parent of x?
-						<br />
-						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through x,
-						and the true memory address of the backpropagated values which must be created and kept alive somehow when temporary values like  x + 10  arise.
+						For example, the value  C = A + B  must remember who A and B are so it can update their gradients later. Simple enough right?
+						The line of code that first made me realise something subtle was going on here was writing a loss function as a sum of squares.
+						Here we will simply write  L = A^2 + B^2 + C^2  as an example. The point is that A, B and C are not going to be local variables, stored on the stack,
+						unless you have some horribly hardcoded neural network.
+						Further to this point, we want to be able to write code like  x = x + 10. But then who is the parent of x?
+						<br /><br />
+						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through the variable named x,
+						and the <i>true</i> memory address of the backpropagated values which must be created and kept alive somehow when temporary values like  x + 10  arise.
 						To do this I made a <code class="language-Cpp">Value</code> class, just like in micrograd, which itself manages pointer to a <i>hidden</i> type called
 						<code class="language-Cpp">_Value</code>.
 						The idea is that users will never directly interact with <code class="language-Cpp">_Value</code>. I was cautious to only have shared pointers to 
 						<code class="language-Cpp">_Value</code> types,
-						meaning that once the MLP or loss <code class="language-Cpp">Value</code> goes out of scope the chain of previous 
-						<code class="language-Cpp">_Value</code>s would be garbage collected. This ended up working, after some trial and error.
+						meaning that once no references exist to a value it can safely be deleted, since no backpropagation could occur. 
+						This happens in practice when the MLP or loss <code class="language-Cpp">Value</code> goes out of scope, and the chain of previous 
+						<code class="language-Cpp">_Value</code> instances can be garbage collected. This ended up working, after some trial and error.
 						Here are some code snippets:
 					</p>
 						<pre class="language-Cpp"><code class="language-Cpp">// Constructors and destructors
@@ -120,23 +121,23 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 					<p>
 						One interesting bug I found (I crashed my VM multiple times in building my first MLP) is that the lambda closures used in the backpropagation could
 						contain shared pointers to the class they belong to. This would prevent the reference count from ever reaching zero, quickly stacking up tens of gigabytes in memory
-						during training. To solve this I used a raw pointer within the lambda closures. This solution is quite inelegant I'd say, and could lead to vulnerabilities upon extensions of the
-						basic opperations <code class="language-Cpp">Value</code> allows. A potential future improvement here would be to standardise the creation of a _back function,
-						which is only allowed to interface with a raw pointer
-						to a <code class="language-Cpp">_Value</code>, and through that its parents. See the code snippet below for my solution, even if it is inelegant.
+						during training. To solve this I used a raw pointer within the lambda closures. This solution is quite inelegant I'd say, and could lead to issues upon extensions of the
+						basic opperations <code class="language-Cpp">Value</code> allows. A potential future improvement here would be to standardise the creation of a
+						<code class="language-Cpp">_back</code> function, which is only allowed to interface with a raw pointer
+						to a <code class="language-Cpp">_Value</code>, and through that its parents. See the code snippet below for an example of my solution, even if it is inelegant.
 					</p>
 					<pre class="language-Cpp"><code class="language-Cpp">Value&lt;T&gt; operator*(const Value&lt;T&gt;& other) const
 {
 	auto out = Value&lt;T&gt;(
 		get_data() * other.get_data(),
-		{get_ptr(), other.get_ptr()}
+		{get_ptr(), other.get_ptr()}	// Keeping track of parents
 	);
 
 	_Value&lt;T&gt;* this_ptr = get_ptr().get();
 	_Value&lt;T&gt;* other_ptr = other.get_ptr().get();
 	_Value&lt;T&gt;* out_ptr = out.get_ptr().get();
 
-	auto _back = [=]()
+	auto _back = [=]()	// Lambda closure only contains raw pointers
 	{
 		this_ptr-&gt;get_grad() += other_ptr-&gt;get_data() * out_ptr-&gt;get_grad();
 		other_ptr-&gt;get_grad() += this_ptr-&gt;get_data() * out_ptr-&gt;get_grad();
@@ -149,11 +150,11 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 
 				<section id="four">
 					<p>
-						With the underlying classes built and finally robust (as far as I could tell) it was time to build up the Modules as in micrograd.
-						The details here are very similar to the python implementation, and didn't give any bit problems. In essence, once the underlying <code class="language-Cpp">Value</code>
+						With the underlying classes built and finally robust (as far as I could tell) it was time to build up the <code class="language-Cpp">Module</code> classes as in micrograd.
+						The details here are very similar to the python implementation, and didn't give any new problems. In essence, once the underlying <code class="language-Cpp">Value</code>
 						classes are well written
 						it is easy to use them just as you would built in types: a principle at the core of C++'s philosophy.
-						<br />
+						<br /><br />
 						I tested the MLP on the MNIST handwritten numbers data set. I chose one hidden layer of size 30 and trained in batches of 50 for 3 epochs.
 						This took 58 minutes, running on my desktop computer (in a VM), and yielded an accuracy of 85% as measured on the test set. Success!
 						Much better than the one in ten odds from random guess - the model was definitely learning.
@@ -202,6 +203,12 @@ for i in range(EPOCHS):
         mnist_model.zero_grad()
         print(f"Epoch: {i}, Batch: {j}, Loss: {running_loss/k}")
         running_loss = 0.0</code></pre>
+
+					<p>
+						Using the code this way took 144 minutes, so around twice as long as the C++ version due to some overhead in the python intepreter.
+						A strong price to pay for the ease of use, but a nice option to have nonetheless.
+					</p>
+
 				</section>
             </div>
             
