@@ -35,38 +35,47 @@
 						<h1>cpp_grad: a first adventure into backpropagation and neural networks</h1>
 					</header>
 					<p>
-						When I discovered Andrej Karpathy's tutorial for micrograd I was immediately hooked.
+						When I discovered <a href="https://youtu.be/VMj-3S1tku0" target="_blank" rel="noopener noreferrer">Andrej Karpathy's tutorial</a> for
+						<a href="https://github.com/karpathy/micrograd" target="_blank" rel="noopener noreferrer">micrograd</a> I was immediately hooked.
 						In my experience it is rare to find resources on neural networks that build the code from scratch.
-						Andrej Karpathy however does a great job of explaining the fundamentals, and using simple yet powerful python code to demonstrate the principles.
+						Andrej Karpathy however does a great job of explaining the fundamentals, and using simple yet powerful python code to demonstrate the principles of backpropagation.
 						I wanted to implement the code for myself, and decided C++ would deliever a healthy challenge while potentially giving enough speed to make the code useful.
-						I called it cpp_grad.
+						I called it <a href="https://github.com/TomKite57/cpp_grad" target="_blank" rel="noopener noreferrer">cpp_grad</a>.
 					</p>
 				</section>
                     
                 <!-- Image  -->
-                <div class="image main">
-                    <img src="/images/italy_island.jpg" width="600" height="450" alt=""/>
-                </div>
+				<div class="image-container">
+					<img src="/images/backprop.png" width="600" height="450" alt=""/>
+					<div class="caption">DALL·E 2's interpretation of: "a dramatic visualisation of a neural network backgropating".</div>
+				</div>
 
 				<section id="two">
 					<p>
 						I didn't realise when I first started this task how much this would refine my thinking of C++.
+						<br />
 						I have developed in C++ for a number of years now, I have listened to podcasts with Bjarne Stroustrup and read the "tour guide".
 						I am familiar with the ideas of RAII, object lifetime, the lack of garbage collection.
-						This project really made me confront everything I had read and understood in theory.
+						But it was this project that really made me confront everything I had read and understood in theory.
 						<br />
-						The essential issue is that micrograds backpropagation relies on each value keeping track of its parents and the operation that gave rise to it.
-						For example, the value C = A + B must <i>remember</i> who A and B are so it can update their gradients later. Simple enough right?
+						The essential issue is that micrograd's backpropagation relies on each value keeping track of its parents and the operation that gave rise to it.
+						For example, the value  C = A + B  must <i>remember</i> who A and B are so it can update their gradients later. Simple enough right?
 						The line that first made me realise something subtle was going on here was writing a loss function as a sum of squares.
-						Here we will simply write L = A^2 + B^2 + C^2 as an example. The point is that A, B and C are not going to be local variables on the stack unless you have some horribly hardcoded neural netowrk.
-						And further to this, we want to be able to write code like x = x + 10. But then who is the parent of x?
+						Here we will simply write  L = A^2 + B^2 + C^2  as an example. The point is that A, B and C are not going to be local variables on the stack unless you have some
+						horribly hardcoded neural netowrk.
+						And further to this, we want to be able to write code like  x = x + 10. But then who is the parent of x?
 						<br />
 						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through x,
-						and the true memory address of the backpropagated values which must be created and kept alive somehow when temporary values like x + 10 arise.
-						<br />
-						<pre class="language-Cpp line-numbers">
-							<code>
-// Constructors and destructors
+						and the true memory address of the backpropagated values which must be created and kept alive somehow when temporary values like  x + 10  arise.
+						To do this I made a <code class="language-Cpp">Value</code> class, just like in micrograd, which itself manages pointer to a <i>hidden</i> type called
+						<code class="language-Cpp">_Value</code>.
+						The idea is that users will never directly interact with <code class="language-Cpp">_Value</code>. I was cautious to only have shared pointers to 
+						<code class="language-Cpp">_Value</code> types,
+						meaning that once the MLP or loss <code class="language-Cpp">Value</code> goes out of scope the chain of previous 
+						<code class="language-Cpp">_Value</code>s would be garbage collected. This ended up working, after some trial and error.
+						Here are some code snippets:
+					</p>
+						<pre class="language-Cpp"><code class="language-Cpp">// Constructors and destructors
 Value()
 {
 	_ptr = std::make_shared&lt;_Value&lt;T&gt;&gt;(static_cast&lt;T&gt;(0));
@@ -104,40 +113,116 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 	other._ptr = nullptr;
 	return *this;
 }
-							</code>
-						</pre>
-					</p>
+</code></pre>
 				</section>
 
 				<section id="three">
 					<p>
-						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
-						
+						One interesting bug I found (I crashed my VM multiple times in building my first MLP) is that the lambda closures used in the backpropagation could
+						contain shared pointers to the class they belong to. This would prevent the reference count from ever reaching zero, quickly stacking up tens of gigabytes in memory
+						during training. To solve this I used a raw pointer within the lambda closures. This solution is quite inelegant I'd say, and could lead to vulnerabilities upon extensions of the
+						basic opperations <code class="language-Cpp">Value</code> allows. A potential future improvement here would be to standardise the creation of a _back function,
+						which is only allowed to interface with a raw pointer
+						to a <code class="language-Cpp">_Value</code>, and through that its parents. See the code snippet below for my solution, even if it is inelegant.
 					</p>
+					<pre class="language-Cpp"><code class="language-Cpp">Value&lt;T&gt; operator*(const Value&lt;T&gt;& other) const
+{
+	auto out = Value&lt;T&gt;(
+		get_data() * other.get_data(),
+		{get_ptr(), other.get_ptr()}
+	);
+
+	_Value&lt;T&gt;* this_ptr = get_ptr().get();
+	_Value&lt;T&gt;* other_ptr = other.get_ptr().get();
+	_Value&lt;T&gt;* out_ptr = out.get_ptr().get();
+
+	auto _back = [=]()
+	{
+		this_ptr-&gt;get_grad() += other_ptr-&gt;get_data() * out_ptr-&gt;get_grad();
+		other_ptr-&gt;get_grad() += this_ptr-&gt;get_data() * out_ptr-&gt;get_grad();
+	};
+	out.set_backward(_back);
+
+	return out;
+}</code></pre>
 				</section>
 
 				<section id="four">
 					<p>
-						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
+						With the underlying classes built and finally robust (as far as I could tell) it was time to build up the Modules as in micrograd.
+						The details here are very similar to the python implementation, and didn't give any bit problems. In essence, once the underlying <code class="language-Cpp">Value</code>
+						classes are well written
+						it is easy to use them just as you would built in types: a principle at the core of C++'s philosophy.
+						<br />
+						I tested the MLP on the MNIST handwritten numbers data set. I chose one hidden layer of size 30 and trained in batches of 50 for 3 epochs.
+						This took 58 minutes, running on my desktop computer (in a VM), and yielded an accuracy of 85% as measured on the test set. Success!
+						Much better than the one in ten odds from random guess - the model was definitely learning.
 					</p>
+				</section>
+
+				<section id="five">
+					<p>
+						One additional aspect I was excited about in this project was using <a href="https://cppyy.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">cppyy</a>
+						to make the C++ code accessible through python. Following a small learning curve, this worked really well: the speed of C++ with the ease of python scripting.
+						Even accessing the MNIST dataset is far easier through python modules! Here is an example of the python I used to train the model:
+					</p>
+					<pre class="language-Cpp"><code class="language-python">import cppyy
+import cppyy.gbl as cpp
+from cppyy.gbl import std
+
+cppyy.include('src/value.hpp')
+cppyy.include('src/module.hpp')
+cppyy.include('src/utils.hpp')
+
+(raw_train_X, raw_train_y), (raw_test_X, raw_test_y) = mnist.load_data()
+train_X = std.vector[std.vector[float]]()
+train_y = std.vector[std.vector[float]]()
+test_X = std.vector[std.vector[float]]()
+test_y = std.vector[std.vector[float]]()
+
+[train_X.push_back(std.vector[float](list(x.flatten()/255 - 0.5))) for x in raw_train_X];
+[train_y.push_back(std.vector[float](list(np.eye(10)[y]))) for y in raw_train_y];
+[test_X.push_back(std.vector[float](list(x.flatten()/255 - 0.5))) for x in raw_test_X];
+[test_y.push_back(std.vector[float](list(np.eye(10)[y]))) for y in raw_test_y];
+
+mnist_model = cpp.MLP[float]([784, 30, 10])
+
+BATCH = 50
+EPOCHS = 3
+LOSSES = []
+running_loss = 0
+
+for i in range(EPOCHS):
+    for j in range(0, len(train_X), BATCH):
+        for k in range(min(BATCH, len(train_X)-j)):
+            loss = mnist_model.loss(train_X[j+k], train_y[j+k])
+            loss.backward()
+            running_loss += loss.get_data()
+        mnist_model.descend_grad(0.0005)
+        mnist_model.zero_grad()
+        print(f"Epoch: {i}, Batch: {j}, Loss: {running_loss/k}")
+        running_loss = 0.0</code></pre>
 				</section>
             </div>
             
 
 		<!-- Footer -->
-			<footer id="footer">
-				<div class="inner">
-					<ul class="icons">
-						<!--<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>-->
-						<li><a href="#" class="icon brands fa-github"><span class="label">Github</span></a></li>
-						<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribbble</span></a></li>-->
-						<li><a href="#" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
-					</ul>
-					<ul class="copyright">
-						<li>&copy; Untitled</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
-					</ul>
-				</div>
-			</footer>
+		<footer id="footer">
+			<div class="inner">
+				<ul class="icons">
+					<!--<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>-->
+					<li><a href="https://github.com/TomKite57" target="_blank" rel="noopener noreferrer" class="icon brands fa-github"><span class="label">Github</span></a></li>
+					<li><a href="https://www.linkedin.com/in/thomas-kite/" target="_blank" rel="noopener noreferrer" class="icon brands fa-linkedin"><span class="label">LinkedIn</span></a></li>
+					<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribbble</span></a></li>--><li>
+					  <a href="https://www.instagram.com/kiteyphotography/" target="_blank" rel="noopener noreferrer" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
+
+					<li><a href="mailto:tomkite57@gmail.com" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
+				</ul>
+				<ul class="copyright">
+					<li>&copy; Untitled</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+				</ul>
+			</div>
+		</footer>
 
 		<!-- Scripts -->
 			<script src="/assets/js/jquery.min.js"></script>

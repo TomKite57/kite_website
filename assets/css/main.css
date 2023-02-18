@@ -205,7 +205,7 @@ input, select, textarea {
 		padding: 0.5em 0 0.5em 1.5em;
 	}
 
-	code {
+	/* code {
 		background: #f7f7f7;
 		border-radius: 0.35em;
 		border: solid 2px #efefef;
@@ -227,7 +227,7 @@ input, select, textarea {
 			line-height: 1.75em;
 			padding: 1em 1.5em;
 			overflow-x: auto;
-		}
+		} */
 
 	.align-left {
 		text-align: left;
