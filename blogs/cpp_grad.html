@@ -43,7 +43,7 @@
 						I called it <a href="https://github.com/TomKite57/cpp_grad" target="_blank" rel="noopener noreferrer">cpp_grad</a>.
 					</p>
 				</section>
-                    
+
                 <!-- Image  -->
 				<div class="image-container">
 					<a href="/blogs/cpp_grad.html" class="image fit thumb"><img src="/images/backprop.png" alt="" /></a>
@@ -51,6 +51,25 @@
 				</div>
 
 				<section id="two">
+					<p>
+						Firstly, what is micrograd? At its heart it is a simple wrapper built around arithmetic types (float, int, etc) which allows
+						you to find the derivatives of the operations you perform on them. Consider the equation L = x + yz. If you want to calculate
+						the derivative dL/dz then you have to propagate the derivative backwards, firstly knowing dL/dy and then knowing dy/dz.
+						Concretely dL/dz = dL/dy * dy/dz through the chain rule. This is why we call the process backpropagation.
+						More generally we refer to this concept as differentiable programming.
+						<br /><br />
+						And why do we care about the derivatives of operations? The answer is that knowing the derivatives allows us to solve
+						optimisation problems. In the case of neural networks we have many weights and biases to optimise. We have a series of inputs
+						and target values we would like to achieve from each input. We can define a function called the loss, which decreases as we get
+						close to replicating the outputs, only reaching zero when we have exactly replicated the target outputs. Minimising this loss
+						function by using the derivatives constitutes training of the network.
+						<br /><br />
+						Beyond this introduction I won't discuss the details of micrograd - Check out Andrej's video on that for a better explanation
+						than I could hope to give. I will however discuss the challenges I faced in implementing the code in C++, and the results I obtained.
+					</p>
+				</section>
+
+				<section id="three">
 					<p>
 						I didn't realise when I first started this task how much this would refine my thinking of C++.
 						<br /><br />
@@ -61,18 +80,19 @@
 						The essential issue is that micrograd's backpropagation relies on each value keeping track of its parents and the operation that gave rise to it.
 						For example, the value  C = A + B  must remember who A and B are so it can update their gradients later. Simple enough right?
 						The line of code that first made me realise something subtle was going on here was writing a loss function as a sum of squares.
-						Here we will simply write  L = A^2 + B^2 + C^2  as an example. The point is that A, B and C are not going to be local variables, stored on the stack,
-						unless you have some horribly hardcoded neural network.
-						Further to this point, we want to be able to write code like  x = x + 10. But then who is the parent of x?
+						Here we will simply write  L = A^2 + B^2 + C^2  as an example. The point is that A, B and C are not going to be local variables stored on the stack,
+						unless you have some horribly hardcoded neural network. Insead A, B and C will most likely all appear as temporary variables in a loop.
+						To further emphasise this point, we want to be able to write code like  x = x + 10. But then who is the parent of x and where is the
+						intermediate value of x stored in memory?
 						<br /><br />
 						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through the variable named x,
-						and the <i>true</i> memory address of the backpropagated values which must be created and kept alive somehow when temporary values like  x + 10  arise.
-						To do this I made a <code class="language-Cpp">Value</code> class, just like in micrograd, which itself manages pointer to a <i>hidden</i> type called
+						and the <i>true</i> memory address of the backpropagated values which must be created and kept alive somehow when temporary intermediate values arise.
+						To do this I made a <code class="language-Cpp">Value</code> class, just like in micrograd, which itself manages a pointer to a <i>hidden</i> type called
 						<code class="language-Cpp">_Value</code>.
-						The idea is that users will never directly interact with <code class="language-Cpp">_Value</code>. I was cautious to only have shared pointers to 
+						The idea is that users will never directly interact with <code class="language-Cpp">_Value</code>. I was cautious to only have shared pointers to
 						<code class="language-Cpp">_Value</code> types,
-						meaning that once no references exist to a value it can safely be deleted, since no backpropagation could occur. 
-						This happens in practice when the MLP or loss <code class="language-Cpp">Value</code> goes out of scope, and the chain of previous 
+						meaning that once no references exist to a given parent it can safely be deleted, since no backpropagation could occur.
+						This happens in practice when the MLP or loss <code class="language-Cpp">Value</code> goes out of scope, and the chain of previous
 						<code class="language-Cpp">_Value</code> instances can be garbage collected. This ended up working, after some trial and error.
 						Here are some code snippets:
 					</p>
@@ -117,7 +137,7 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 </code></pre>
 				</section>
 
-				<section id="three">
+				<section id="four">
 					<p>
 						One interesting bug I found (I crashed my VM multiple times in building my first MLP) is that the lambda closures used in the backpropagation could
 						contain shared pointers to the class they belong to. This would prevent the reference count from ever reaching zero, quickly stacking up tens of gigabytes in memory
@@ -148,7 +168,7 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 }</code></pre>
 				</section>
 
-				<section id="four">
+				<section id="five">
 					<p>
 						With the underlying classes built and finally robust (as far as I could tell) it was time to build up the <code class="language-Cpp">Module</code> classes as in micrograd.
 						The details here are very similar to the python implementation, and didn't give any new problems. In essence, once the underlying <code class="language-Cpp">Value</code>
@@ -161,7 +181,7 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 					</p>
 				</section>
 
-				<section id="five">
+				<section id="six">
 					<p>
 						One additional aspect I was excited about in this project was using <a href="https://cppyy.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">cppyy</a>
 						to make the C++ code accessible through python. Following a small learning curve, this worked really well: the speed of C++ with the ease of python scripting.
@@ -190,7 +210,6 @@ mnist_model = cpp.MLP[float]([784, 30, 10])
 
 BATCH = 50
 EPOCHS = 3
-LOSSES = []
 running_loss = 0
 
 for i in range(EPOCHS):
@@ -206,18 +225,19 @@ for i in range(EPOCHS):
 
 					<p>
 						Using the code this way took 144 minutes, so around twice as long as the C++ version due to some overhead in the python intepreter.
-						A strong price to pay for the ease of use, but a nice option to have nonetheless.
+						A strong price to pay for the ease of use, but a nice option to have nonetheless. This could likely be improved by writing more of the training
+						loops in C++ and only calling them from python.
 					</p>
 
 				</section>
 
-				<section id="home">				
+				<section id="home">
 					<ul class="actions">
 						<li><a href="/" class="button">Home</a></li>
 					</ul>
 				</section>
             </div>
-            
+
 
 		<!-- Footer -->
 		<footer id="footer">
