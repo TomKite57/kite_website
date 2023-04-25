@@ -3219,3 +3219,10 @@ input, select, textarea {
 			}
 
 	}
+
+
+/* TKITE additions */
+.blog_title {
+	height: 4.5em; /* 3 lines of text */
+	overflow: auto; /* Prevent text from overflowing */
+  }
