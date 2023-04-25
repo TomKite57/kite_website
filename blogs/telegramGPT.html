@@ -37,26 +37,44 @@
 					<p>
 						Okay, I guess GPT was already in your pocket - but not as easy as this!
 						After getting tired of constantly reminding openAI that I am indeed a human, I decided to take matters into my own hands.
-						Hosting a personal telegram bot on a Raspberry Pi which calls the API of the world's new favourite AI friend seemed like a worthwhile project.
+						Hosting a personal Telegram bot on a Raspberry Pi which calls the API of the world's new favorite AI friend seemed like a worthwhile project.
 						Also, it is a good intersection of various buzzwords, and is therefore also a worthwhile blog post.
 					</p>
 				</section>
 
                 <!-- Image  -->
-                <div class="image main">
-                    <img src="/images/telegramGPT.png" alt=""/>
-                </div>
+				<div class="image-container">
+					<a href="/blogs/telegramGPT.html" class="image fit thumb"><img src="/images/telegramGPT.png" alt="" /></a>
+					<div class="caption">DALL·E 2's interpretation of: "A futuristic intelligent humanoid robot using an antique telegram machine".</div>
+				</div>
 
 				<section id="two">
 					<p>
-						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
+						This little coding story starts with it being the week of my birthday, and a friend of mine asking me what it is I wanted as a gift.
+						He had traveled to visit me in Cambridge (UK), and when he asked me that I knew that we were just minutes walk from the only physical Raspberry Pi shop in the world (or so I am told).
+						I had helped this friend build his first gaming PC a year or so earlier, so there was something poetic about it. I traveled home excited by my new pocket sized computer.
+						<br /><br />
+						But what is a Raspberry Pi good for? What project would I chose that couldn't just be done within my usual setup?
+						I had recently heard of how easy it was to create Telegram bots, which would allow you to automate certain tasks and communicate easily with it from either phone or browser.
+						This combined with my frustration at constantly logging in to use chatGPT, and constantly ticking a box to prove my human status, led to the idea.
+						There is nothing revolutionary in this project at all. In fact, it is quite basic for many developers.
+						For me however it exposed me to new ideas like the infinite polling loops while waiting for messages, communicating via API keys, user authorization with ID, persistent state in databases, etc.
+						<br /><br />
+						While this blog doesn't aim to be a tutorial, I hope some other aspiring developers or code enthusiasts will enjoy a slight demystifying of concepts here, and perhaps a bit of inspiration for their own projects.
 					</p>
 				</section>
 
+				<!-- Image  -->
+				<div class="image-container">
+					<img src="/images/telegram_example.png" alt="" style="display:block; margin:0 auto; width:75%;"/>
+					<div class="caption" style="display:block; margin:0 auto; width:75%;">Engaging with chatGPT through a Telegram bot.</div>
+				</div>
+
 				<section id="three">
 					<p>
-						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
-
+						Let's start with the bot itself. Telegram bots are super easy to set up.
+						If you are using python, like I was, then <a href="https://github.com/eternnoir/pyTelegramBotAPI#writing-your-first-bot" target="_blank" rel="noopener noreferrer">this page</a> shows you most of what you need.
+						You create an instance of the bot class in python, give it the API key you were provided in Telegram upon making a new bot there.
 					</p>
 				</section>
 

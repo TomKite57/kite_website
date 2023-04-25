@@ -39,7 +39,7 @@
 						<a href="https://github.com/karpathy/micrograd" target="_blank" rel="noopener noreferrer">micrograd</a> I was immediately hooked.
 						In my experience it is rare to find resources on neural networks that build the code from scratch.
 						Andrej Karpathy however does a great job of explaining the fundamentals, and using simple yet powerful python code to demonstrate the principles of backpropagation.
-						I wanted to implement the code for myself, and decided C++ would deliever a healthy challenge while potentially giving enough speed to make the code useful.
+						I wanted to implement the code for myself, and decided C++ would deliver a healthy challenge while potentially giving enough speed to make the code useful.
 						I called it <a href="https://github.com/TomKite57/cpp_grad" target="_blank" rel="noopener noreferrer">cpp_grad</a>.
 					</p>
 				</section>
@@ -47,7 +47,7 @@
                 <!-- Image  -->
 				<div class="image-container">
 					<a href="/blogs/cpp_grad.html" class="image fit thumb"><img src="/images/backprop.png" alt="" /></a>
-					<div class="caption">DALL·E 2's interpretation of: "a dramatic visualisation of a neural network backgropating".</div>
+					<div class="caption">DALL·E 2's interpretation of: "a dramatic visualization of a neural network backpropagating".</div>
 				</div>
 
 				<section id="two">
@@ -59,9 +59,9 @@
 						More generally we refer to this concept as differentiable programming.
 						<br /><br />
 						And why do we care about the derivatives of operations? The answer is that knowing the derivatives allows us to solve
-						optimisation problems. In the case of neural networks we have many weights and biases to optimise. We have a series of inputs
+						optimization problems. In the case of neural networks we have many weights and biases to optimize. We have a series of inputs
 						and target values we would like to achieve from each input. We can define a function called the loss, which decreases as we get
-						close to replicating the outputs, only reaching zero when we have exactly replicated the target outputs. Minimising this loss
+						close to replicating the outputs, only reaching zero when we have exactly replicated the target outputs. Minimizing this loss
 						function by using the derivatives constitutes training of the network.
 						<br /><br />
 						Beyond this introduction I won't discuss the details of micrograd - Check out Andrej's video on that for a better explanation
@@ -71,7 +71,7 @@
 
 				<section id="three">
 					<p>
-						I didn't realise when I first started this task how much this would refine my thinking of C++.
+						I didn't realize when I first started this task how much this would refine my thinking of C++.
 						<br /><br />
 						I have developed in C++ for a number of years now, I have listened to podcasts with Bjarne Stroustrup and read the "tour guide".
 						I am familiar with the ideas of RAII, object lifetime, the lack of garbage collection.
@@ -79,10 +79,10 @@
 						<br /><br />
 						The essential issue is that micrograd's backpropagation relies on each value keeping track of its parents and the operation that gave rise to it.
 						For example, the value  C = A + B  must remember who A and B are so it can update their gradients later. Simple enough right?
-						The line of code that first made me realise something subtle was going on here was writing a loss function as a sum of squares.
+						The line of code that first made me realize something subtle was going on here was writing a loss function as a sum of squares.
 						Here we will simply write  L = A^2 + B^2 + C^2  as an example. The point is that A, B and C are not going to be local variables stored on the stack,
-						unless you have some horribly hardcoded neural network. Insead A, B and C will most likely all appear as temporary variables in a loop.
-						To further emphasise this point, we want to be able to write code like  x = x + 10. But then who is the parent of x and where is the
+						unless you have some horribly hardcoded neural network. Instead A, B and C will most likely all appear as temporary variables in a loop.
+						To further emphasize this point, we want to be able to write code like  x = x + 10. But then who is the parent of x and where is the
 						intermediate value of x stored in memory?
 						<br /><br />
 						The key to resolving this is to divorce the <i>user facing</i> memory address accessible through the variable named x,
@@ -142,7 +142,7 @@ Value&lt;T&gt;& operator=(Value&lt;T&gt;&& other)
 						One interesting bug I found (I crashed my VM multiple times in building my first MLP) is that the lambda closures used in the backpropagation could
 						contain shared pointers to the class they belong to. This would prevent the reference count from ever reaching zero, quickly stacking up tens of gigabytes in memory
 						during training. To solve this I used a raw pointer within the lambda closures. This solution is quite inelegant I'd say, and could lead to issues upon extensions of the
-						basic opperations <code class="language-Cpp">Value</code> allows. A potential future improvement here would be to standardise the creation of a
+						basic operations <code class="language-Cpp">Value</code> allows. A potential future improvement here would be to standardize the creation of a
 						<code class="language-Cpp">_back</code> function, which is only allowed to interface with a raw pointer
 						to a <code class="language-Cpp">_Value</code>, and through that its parents. See the code snippet below for an example of my solution, even if it is inelegant.
 					</p>
@@ -224,7 +224,7 @@ for i in range(EPOCHS):
         running_loss = 0.0</code></pre>
 
 					<p>
-						Using the code this way took 144 minutes, so around twice as long as the C++ version due to some overhead in the python intepreter.
+						Using the code this way took 144 minutes, so around twice as long as the C++ version due to some overhead in the python interpreter.
 						A strong price to pay for the ease of use, but a nice option to have nonetheless. This could likely be improved by writing more of the training
 						loops in C++ and only calling them from python.
 					</p>
@@ -246,7 +246,7 @@ for i in range(EPOCHS):
 					<!--<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>-->
 					<li><a href="https://github.com/TomKite57" target="_blank" rel="noopener noreferrer" class="icon brands fa-github"><span class="label">Github</span></a></li>
 					<li><a href="https://www.linkedin.com/in/thomas-kite/" target="_blank" rel="noopener noreferrer" class="icon brands fa-linkedin"><span class="label">LinkedIn</span></a></li>
-					<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribbble</span></a></li>--><li>
+					<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribble</span></a></li>--><li>
 					  <a href="https://www.instagram.com/kiteyphotography/" target="_blank" rel="noopener noreferrer" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
 
 					<li><a href="mailto:tomkite57@gmail.com" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
