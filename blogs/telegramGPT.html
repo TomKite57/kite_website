@@ -92,11 +92,25 @@ bot.infinity_polling()</code></pre>
 					<p>
 						The code imports the telebot module, and creates an instance of the TeleBot class which takes the bot token as argument
 						(this is a unique key for your bot, don't share it with anyone!).
+						<br /><br />
+						The TeleBot instance provides a function decorator
+						(see <a href="https://usiam.quarto.pub/python-blogs/posts/decorators/" target="_blank" rel="noopener noreferrer">this blog</a> for a great example based introduction to wrappers)
+						which allows you to register callbacks - functions which are called in response to messages the bot receives or over events.
+						<br /><br />
+						The first callback responds to the commands <i>/start</i> and <i>/help</i>. The second responds to all other messages, in this case by just repeating the message back.
+						Two interesting points here: first, the callbacks are essentially checked top to bottom,
+						so sending the message <i>/help</i> is answered by the first and only the first callback.
+						Second, the lambda function is true for any and all messages, making this a great way to capture every message which didn't pass a previous check.
+						<br /><br />
+						Oscar Wild said "Imitation is the sincerest form of flattery that mediocrity can pay to greatness".
+						Let's make our mediocre bot less flattering, and actually make it say something new and interesting rather than imitating the user.
+						We will do this by forwarding messages to the openAI API, essentially getting a chatGPT response.
 					</p>
 				</section>
 
 				<section id="four">
 					<p>
+						https://platform.openai.com/docs/guides/chat
 						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
 					</p>
 				</section>
