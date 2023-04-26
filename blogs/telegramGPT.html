@@ -74,7 +74,24 @@
 					<p>
 						Let's start with the bot itself. Telegram bots are super easy to set up.
 						If you are using python, like I was, then <a href="https://github.com/eternnoir/pyTelegramBotAPI#writing-your-first-bot" target="_blank" rel="noopener noreferrer">this page</a> shows you most of what you need.
-						You create an instance of the bot class in python, give it the API key you were provided in Telegram upon making a new bot there.
+						The starting code they provide looks like this:
+					</p>
+					<pre class="language-python"><code class="language-python">import telebot
+
+bot = telebot.TeleBot("YOUR_BOT_TOKEN")
+
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+	bot.reply_to(message, "Howdy, how are you doing?")
+
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+	bot.reply_to(message, message.text)
+
+bot.infinity_polling()</code></pre>
+					<p>
+						The code imports the telebot module, and creates an instance of the TeleBot class which takes the bot token as argument
+						(this is a unique key for your bot, don't share it with anyone!).
 					</p>
 				</section>
 
