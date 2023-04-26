@@ -110,12 +110,118 @@ bot.infinity_polling()</code></pre>
 
 				<section id="four">
 					<p>
-						https://platform.openai.com/docs/guides/chat
-						This is the main body of the blog post. It can be as long as I want it to be. I can even include images and code snippets.
+						First and foremost, it is worth noting that the openAI API is not free, unlike chatGPT.
+						You will have to create a a paid account, and that way get an API key which charges you (again, don't share that key!).
+						However, it is extremely cheap! The chatGPT model we will use in this project is gpt-3.5-turbo, which costs $0.002 / 1K tokens.
+						Tokens aren't very easy to count, but think along the lines of 2 or 3 tokens per word.
+						<br /><br />
+						To get started with calling the API check out
+						<a href="https://platform.openai.com/docs/guides/chat" target="_blank" rel="noopener noreferrer">this example</a>.
+						In particular they show an example like this:
+					</p>
+					<pre class="language-python"><code class="language-python">import openai
+
+openai.ChatCompletion.create(
+  model="gpt-3.5-turbo",
+  messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Who won the world series in 2020?"},
+        {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
+        {"role": "user", "content": "Where was it played?"}
+    ]
+)</code></pre>
+					<p>
+						The interesting thing to note here is that whenever you ask your friendly bot something new, you have to show it all the previous conversation
+						with each message listed as "user" or "assistant" respectively. The system message simply gives some context for the language model.
+						Calling the ChatCompletion.create function will return a dictionary with the response, and some other information.
+						The response can then be sent back to the user of the bot, and the conversation thread grows.
+						<br /><br />
+						Seeing how the API works led to a big design choice in this project, which is to have a ConversationThread class which can store each response,
+						have its tokens counted, and can be instantiated for each user of the bot. Importantly, the conversation can be cleared.
+						This must be an option the user has since no more than 4096 tokens can be sent to the api (this is model dependent. gpt-4 will greatly improve on this).
 					</p>
 				</section>
-            </div>
 
+				<section id="five">
+					<p>
+						So that is basically it in terms of background. Everything else comes down to how you choose to weave these two tools together.
+						Below I will discuss some of my own design choices. I have no doubt that everything I did could have been done in infinitely better ways.
+						<br /><br />
+						I wanted to make absolutely sure that nobody could message this bot without my permission, but I didn't want it to be limited to just me.
+						I created a series of authorization checks which extract the user id from a Telegram Message object. These checks should be applied to every callback
+						function the bot has. I chose to define a decorator factory
+						(again, check out <a href="https://usiam.quarto.pub/python-blogs/posts/decorators/" target="_blank" rel="noopener noreferrer">this blog</a>)
+						which could then be applied to every function. This solution is repetitive, but is fine for the small number of functions our bot will contain.
+						If I had to refactor this, I would probably create an inheritance hierarchy of callable classes and use something akin to the decorator design pattern
+						described in the famous Gang of Four book
+						(alternatively see it <a href="https://refactoring.guru/design-patterns/decorator" target="_blank" rel="noopener noreferrer">here</a>).
+						Here is my code:
+					</p>
+					<pre class="language-python"><code class="language-python">def whitelist_filter_factory(bot, whitelist):
+	def whitelist_filter(func):
+		def wrapped(message):
+			if message.from_user.id in whitelist:
+				func(message)
+			else:
+				response = f"Your id is not whitelisted to use this bot."
+				bot.send_message(get_chat_id(message), response)
+		return wrapped
+	return whitelist_filter</code></pre>
+					<p>
+						The reason this is a decorator factory rather than just a decorator is because I need the bot to be taken as an argument, so we can
+						warn the user if they're not whitelisted. I created a similar decorator for adding new users if they are whitelisted, but not yet in the database
+						of conversations. Both these decorators will be seen in the final code snippet at the end of this blog.
+					</p>
+				</section>
+
+			<section id="six">
+				<p>
+					A second design choice is that I wanted conversations to be preserved, even if the bot goes offline (e.g. the Raspberry Pi turns off).
+					The idea of having persistent state is ubiquitous in so much of programming, and consequently there are arbitrarily many databases to choose from.
+					In my personal coding experience this is a new venture for me, as normally I run a script with inputs and simply save the outputs for analysis later.
+					There isn't a long term "recall" of some memory. I therefore didn't want to use a black box as my database, instead choosing a low tech solution I could see more clearly.
+					I chose to save a dictionary with keys being user ids (extracted from the Telegram Message object) and values being a UserProfile class. That class in turn contains the name
+					of the user and a current ConversationThread. This database was saved and loaded as needed using
+					<a href="https://docs.python.org/3/library/pickle.html" target="_blank" rel="noopener noreferrer">Pickle</a>.
+					The idea of Pickling is to save an arbitrary python object as serialized data.
+					In the end my crude database usage looked something like this:
+				</p>
+					<pre class="language-python"><code class="language-python">from pathlib import Path
+import pickle
+
+def load_db():
+	with open(PICKLE_FNAME, 'rb') as file:
+	obj = pickle.load(file)
+	return obj
+
+def save_db(db):
+	with open(PICKLE_FNAME, 'wb') as file:
+		pickle.dump(db, file)
+
+def get_user_profile(user_id):
+	db = load_db()
+
+	assert user_id in db, "User id not currently in database"
+
+	return db[user_id]</code></pre>
+				<p>
+					The new user decorator factory mentioned earlier will add users to the database.
+				</p>
+			</section>
+
+			<section id="seven">
+				<p>
+					Talk about clear and count commands
+				</p>
+			</section>
+
+			<section id="eight">
+				<p>
+					Final result, and future development
+				</p>
+			</section>
+
+			</div>
 
 		<!-- Footer -->
 		<footer id="footer">
@@ -124,7 +230,7 @@ bot.infinity_polling()</code></pre>
 					<!--<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>-->
 					<li><a href="https://github.com/TomKite57" target="_blank" rel="noopener noreferrer" class="icon brands fa-github"><span class="label">Github</span></a></li>
 					<li><a href="https://www.linkedin.com/in/thomas-kite/" target="_blank" rel="noopener noreferrer" class="icon brands fa-linkedin"><span class="label">LinkedIn</span></a></li>
-					<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribbble</span></a></li>--><li>
+					<!--<li><a href="#" class="icon brands fa-dribbble"><span class="label">Dribble</span></a></li>--><li>
 					  <a href="https://www.instagram.com/kiteyphotography/" target="_blank" rel="noopener noreferrer" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
 
 					<li><a href="mailto:tomkite57@gmail.com" class="icon solid fa-envelope"><span class="label">Email</span></a></li>
