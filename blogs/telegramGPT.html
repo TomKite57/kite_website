@@ -211,13 +211,79 @@ def get_user_profile(user_id):
 
 			<section id="seven">
 				<p>
-					Talk about clear and count commands
+					Earlier we saw how to define commands. Let's now write some commands which will help us control the bot.
+					I also mentioned previously that tokens build up throughout a conversation, and must be routinely cleared
+					(just like starting a new conversation on the usual chatGPT).
+					I defined two commands <i>/count</i> and <i>/clear</i> which did these tasks.
+					For counting tokens a useful code snippet is given
+					<a href="https://platform.openai.com/docs/guides/chat" target="_blank" rel="noopener noreferrer">here</a>.
+					Clearing the conversation was as simple as loading the corresponding UserProfile from the database and clearing the currently stored messages.
+					<br /><br />
+					Some other commands I defined were an <i>/init</i>, which takes a new users name.
+					Also a <i>/help</i> command, which simply tells the user what the bot is and what other commands exist.
+					A final set of commands are probably terrible practice, but were interesting and helpful in debugging.
+					It turns out that you easily terminate and rerun a python code from within the python code itself,
+					so my workflow became a back and forth between typing new python code and then messaging the bot itself on telegram with a <i>/restart</i> command!
+					<br /><br />
+					In general, debugging became a surreal experience since I could, in some sense, talk to my code.
+					For example, my way of checking if emojis were a dangerous edge case was to ask the bot "do you understand this?" and send a duck emoji.
+					It proceeded to describe to be what a duck is. No need to check for emojis!
 				</p>
+
+				<!-- Image  -->
+				<div class="image-container">
+					<img src="/images/telegram_example_emoji.png" alt="" style="display:block; margin:0 auto; width:100%;"/>
+					<div class="caption" style="display:block; margin:0 auto; width:100%;">GPT has no problem understanding emojis (and Harry Potter?).</div>
+				</div>
 			</section>
 
 			<section id="eight">
 				<p>
-					Final result, and future development
+					As a bottom line result to this blog I will show the main function which sends GPT responses to the user:
+				</p>
+				<pre class="language-python"><code class="language-python"># MESSAGE HANDLER
+@bot.message_handler(func=lambda msg: True)
+@whitelist_filter_factory(bot, WHITELIST)
+@new_user_factory(bot)
+def chatGPT_call(message):
+	user_id = message.from_user.id
+	text = message.text
+	date = message.date
+
+	user_profile = get_user_profile(user_id)
+	user_profile.current_conversation.add_message(Message(text, "user", date))
+
+	response_json = conversation_api_call(user_profile.current_conversation.open_ai_format())
+	response = response_json["choices"][0]["message"]["content"]
+
+	user_profile.current_conversation.add_message(Message(response, "assistant", date))
+	save_user_profile(user_id, user_profile)
+
+	bot.send_message(get_chat_id(message), response)</code></pre>
+				<p>
+					A lot of this code delegates responsibility to other smaller functions (as code should!), but hopefully it illustrates the different building blocs of this project.
+					This function responds to all messages that didn't trigger a previous callback function (one of those is a regex check for an unknown command).
+					The code then assumes it is a GPT prompt. First it retrieves the UserProfile from the database, and adds the new prompt as a message from "user".
+					This is forwarded to the openAI API, and the response content is extracted from the dictionary. This is also added to the conversation as being from the "assistant".
+					The new conversation is saved back into the database for safe keeping, and the bot gives the response to the user.
+					<br /><br />
+					This project has honestly been very useful, and it is now my favorite way to interact with chatGPT.
+					It is easy to quickly send a message when you are on the go,
+					and in one case I even sent a message while I had no internet access, knowing I would get a response as soon as I was back online.
+					<br /><br />
+					To take the project further I do plan on adding new features. Firstly I would like to add a logging system, since I'd like to keep track of what goes wrong
+					(from the user end you will just never get a response, without knowing why) and how to fix it. Also I would like to know if some user who isn't whitelisted tries to
+					use the bot. Secondly, I want to be able to <i>/save</i> and <i>/load</i> conversations akin to what chatGPT has. This way some interesting ConversationThread could be saved for later.
+					I would also add a <i>/remind</i> command to see what that whole conversation was, without using any more tokens.
+					A final learning opportunity I plan to derive from all this is to create a Docker container for this project, making it easier to host on the Raspberry Pi without simply leaving
+					a terminal in an infinite polling state. This might also allow me to automatically redeploy the bot from the main branch of a git repo.
+					This way I could stop the tedious process of accessing the Raspberry Pi through SSH.
+				</p>
+			</section>
+
+			<section id="nine">
+				<p>
+					I hope this blog served as inspiration for someone to try this for themselves! If you do then please reach out to me on LinkedIn or by email, and let me know how it goes.
 				</p>
 			</section>
 
