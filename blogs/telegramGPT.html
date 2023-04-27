@@ -54,7 +54,7 @@
 						He had traveled to visit me in Cambridge (UK), and when he asked me that I knew that we were just minutes walk from the only physical Raspberry Pi shop in the world (or so I am told).
 						I had helped this friend build his first gaming PC a year or so earlier, so there was something poetic about it. I traveled home excited by my new pocket sized computer.
 						<br /><br />
-						But what is a Raspberry Pi good for? What project would I chose that couldn't just be done within my usual setup?
+						But what is a Raspberry Pi good for? What project would I choose that couldn't just be done within my usual setup?
 						I had recently heard of how easy it was to create Telegram bots, which would allow you to automate certain tasks and communicate easily with it from either phone or browser.
 						This combined with my frustration at constantly logging in to use chatGPT, and constantly ticking a box to prove my human status, led to the idea.
 						There is nothing revolutionary in this project at all. In fact, it is quite basic for many developers.
@@ -73,7 +73,7 @@
 				<section id="three">
 					<p>
 						Let's start with the bot itself. Telegram bots are super easy to set up.
-						If you are using python, like I was, then <a href="https://github.com/eternnoir/pyTelegramBotAPI#writing-your-first-bot" target="_blank" rel="noopener noreferrer">this page</a> shows you most of what you need.
+						If you are using python like me then <a href="https://github.com/eternnoir/pyTelegramBotAPI#writing-your-first-bot" target="_blank" rel="noopener noreferrer">this page</a> shows you most of what you need.
 						The starting code they provide looks like this:
 					</p>
 					<pre class="language-python"><code class="language-python">import telebot
@@ -94,12 +94,12 @@ bot.infinity_polling()</code></pre>
 						(this is a unique key for your bot, don't share it with anyone!).
 						<br /><br />
 						The TeleBot instance provides a function decorator
-						(see <a href="https://usiam.quarto.pub/python-blogs/posts/decorators/" target="_blank" rel="noopener noreferrer">this blog</a> for a great example based introduction to wrappers)
-						which allows you to register callbacks - functions which are called in response to messages the bot receives or over events.
+						(see <a href="https://usiam.quarto.pub/python-blogs/posts/decorators/" target="_blank" rel="noopener noreferrer">this blog</a> for a great example based introduction to decorators)
+						which allows you to register handlers - functions which are called in response to messages the bot receives or over events.
 						<br /><br />
-						The first callback responds to the commands <i>/start</i> and <i>/help</i>. The second responds to all other messages, in this case by just repeating the message back.
-						Two interesting points here: first, the callbacks are essentially checked top to bottom,
-						so sending the message <i>/help</i> is answered by the first and only the first callback.
+						The first handler responds to the commands <i>/start</i> and <i>/help</i>. The second responds to all other messages, in this case by just repeating the message back.
+						Two interesting points here: first, the handlers are essentially checked top to bottom,
+						so sending the message <i>/help</i> is answered by the first and only the first handler.
 						Second, the lambda function is true for any and all messages, making this a great way to capture every message which didn't pass a previous check.
 						<br /><br />
 						Oscar Wild said "Imitation is the sincerest form of flattery that mediocrity can pay to greatness".
@@ -134,11 +134,11 @@ openai.ChatCompletion.create(
 						The interesting thing to note here is that whenever you ask your friendly bot something new, you have to show it all the previous conversation
 						with each message listed as "user" or "assistant" respectively. The system message simply gives some context for the language model.
 						Calling the ChatCompletion.create function will return a dictionary with the response, and some other information.
-						The response can then be sent back to the user of the bot, and the conversation thread grows.
+						The response can then be sent back to the user of the telegram bot, and the conversation thread grows.
 						<br /><br />
 						Seeing how the API works led to a big design choice in this project, which is to have a ConversationThread class which can store each response,
-						have its tokens counted, and can be instantiated for each user of the bot. Importantly, the conversation can be cleared.
-						This must be an option the user has since no more than 4096 tokens can be sent to the api (this is model dependent. gpt-4 will greatly improve on this).
+						have its tokens counted, and can be instantiated for each user of the telegram bot. Importantly, the conversation can be cleared.
+						This must be an option since no more than 4096 tokens can be sent to the api (this is model dependent. gpt-4 will greatly improve on this).
 					</p>
 				</section>
 
@@ -148,7 +148,7 @@ openai.ChatCompletion.create(
 						Below I will discuss some of my own design choices. I have no doubt that everything I did could have been done in infinitely better ways.
 						<br /><br />
 						I wanted to make absolutely sure that nobody could message this bot without my permission, but I didn't want it to be limited to just me.
-						I created a series of authorization checks which extract the user id from a Telegram Message object. These checks should be applied to every callback
+						I created a series of authorization checks which extract the user id from a Telegram Message object. These checks should be applied to every handler
 						function the bot has. I chose to define a decorator factory
 						(again, check out <a href="https://usiam.quarto.pub/python-blogs/posts/decorators/" target="_blank" rel="noopener noreferrer">this blog</a>)
 						which could then be applied to every function. This solution is repetitive, but is fine for the small number of functions our bot will contain.
@@ -171,6 +171,9 @@ openai.ChatCompletion.create(
 						The reason this is a decorator factory rather than just a decorator is because I need the bot to be taken as an argument, so we can
 						warn the user if they're not whitelisted. I created a similar decorator for adding new users if they are whitelisted, but not yet in the database
 						of conversations. Both these decorators will be seen in the final code snippet at the end of this blog.
+						<br /><br />
+						The code snippet above explicitly assumes the function being decorated only takes "message" as an argument.
+						This is an unnecessary limitation, but fine in this context since handler functions only receive one message.
 					</p>
 				</section>
 
@@ -179,7 +182,8 @@ openai.ChatCompletion.create(
 					A second design choice is that I wanted conversations to be preserved, even if the bot goes offline (e.g. the Raspberry Pi turns off).
 					The idea of having persistent state is ubiquitous in so much of programming, and consequently there are arbitrarily many databases to choose from.
 					In my personal coding experience this is a new venture for me, as normally I run a script with inputs and simply save the outputs for analysis later.
-					There isn't a long term "recall" of some memory. I therefore didn't want to use a black box as my database, instead choosing a low tech solution I could see more clearly.
+					I don't often use long term "recall" of some memory multiple times in the program.
+					I therefore didn't want to use a black box as my database, instead choosing a low tech solution I could see more clearly.
 					I chose to save a dictionary with keys being user ids (extracted from the Telegram Message object) and values being a UserProfile class. That class in turn contains the name
 					of the user and a current ConversationThread. This database was saved and loaded as needed using
 					<a href="https://docs.python.org/3/library/pickle.html" target="_blank" rel="noopener noreferrer">Pickle</a>.
@@ -205,7 +209,8 @@ def get_user_profile(user_id):
 
 	return db[user_id]</code></pre>
 				<p>
-					The new user decorator factory mentioned earlier will add users to the database.
+					As mentioned earlier I also added a decorator factory for adding new users.
+					This will add users to the database and ensure the assert statement is never triggered.
 				</p>
 			</section>
 
@@ -221,19 +226,19 @@ def get_user_profile(user_id):
 					<br /><br />
 					Some other commands I defined were an <i>/init</i>, which takes a new users name.
 					Also a <i>/help</i> command, which simply tells the user what the bot is and what other commands exist.
-					A final set of commands are probably terrible practice, but were interesting and helpful in debugging.
+					One final command I defined is probably terrible practice, but it was interesting and helpful in debugging.
 					It turns out that you easily terminate and rerun a python code from within the python code itself,
 					so my workflow became a back and forth between typing new python code and then messaging the bot itself on telegram with a <i>/restart</i> command!
 					<br /><br />
 					In general, debugging became a surreal experience since I could, in some sense, talk to my code.
 					For example, my way of checking if emojis were a dangerous edge case was to ask the bot "do you understand this?" and send a duck emoji.
-					It proceeded to describe to be what a duck is. No need to check for emojis!
+					It proceeded to describe to me what a duck is. No need to check for emojis!
 				</p>
 
 				<!-- Image  -->
 				<div class="image-container">
 					<img src="/images/telegram_example_emoji.png" alt="" style="display:block; margin:0 auto; width:100%;"/>
-					<div class="caption" style="display:block; margin:0 auto; width:100%;">GPT has no problem understanding emojis (and Harry Potter?).</div>
+					<div class="caption" style="display:block; margin:0 auto; width:100%;">GPT has no problem understanding emojis (or the story of Harry Potter apparently).</div>
 				</div>
 			</section>
 
@@ -262,8 +267,9 @@ def chatGPT_call(message):
 	bot.send_message(get_chat_id(message), response)</code></pre>
 				<p>
 					A lot of this code delegates responsibility to other smaller functions (as code should!), but hopefully it illustrates the different building blocs of this project.
-					This function responds to all messages that didn't trigger a previous callback function (one of those is a regex check for an unknown command).
-					The code then assumes it is a GPT prompt. First it retrieves the UserProfile from the database, and adds the new prompt as a message from "user".
+					This function responds to all messages that didn't trigger a previous handler function (one of those is a regex check for an unknown command).
+					The code then assumes it is a GPT prompt. First it retrieves the user id from the message, and loads the corresponding UserProfile from the database.
+					Then it adds the new prompt as a message from "user".
 					This is forwarded to the openAI API, and the response content is extracted from the dictionary. This is also added to the conversation as being from the "assistant".
 					The new conversation is saved back into the database for safe keeping, and the bot gives the response to the user.
 					<br /><br />
@@ -271,8 +277,8 @@ def chatGPT_call(message):
 					It is easy to quickly send a message when you are on the go,
 					and in one case I even sent a message while I had no internet access, knowing I would get a response as soon as I was back online.
 					<br /><br />
-					To take the project further I do plan on adding new features. Firstly I would like to add a logging system, since I'd like to keep track of what goes wrong
-					(from the user end you will just never get a response, without knowing why) and how to fix it. Also I would like to know if some user who isn't whitelisted tries to
+					To take the project further I plan on adding new features. Firstly I would like to add a logging system, since I'd like to keep track of what goes wrong and how to fix it
+					(from the user end you will just never get a response, without knowing why). Also I would like to know if some user who isn't whitelisted tries to
 					use the bot. Secondly, I want to be able to <i>/save</i> and <i>/load</i> conversations akin to what chatGPT has. This way some interesting ConversationThread could be saved for later.
 					I would also add a <i>/remind</i> command to see what that whole conversation was, without using any more tokens.
 					A final learning opportunity I plan to derive from all this is to create a Docker container for this project, making it easier to host on the Raspberry Pi without simply leaving
